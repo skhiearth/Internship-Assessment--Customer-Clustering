@@ -1,0 +1,100 @@
+---
+title: "Customer Clustering"
+author: "Utkarsh Sharma"
+date: "16/11/2019"
+output: 
+  prettydoc::html_pretty:
+    toc: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 1. Problem Statement, Dataset and Pre-processing
+To handle the task of clustering customers, we are taking into account a fictitious database. Customers of the business are measured in the following criteria:
+
+1. Demographics (Gender, Age, Annual Income)
+2. Channels (Acquisition Source)
+3. Engagement (Spending Score)
+
+The Spending Score is a score on a scale of 1-100 which the business uses to rank its customers. A higher spending score means the customer engages more with the products of the business, and drives more profit than a customer with a lower spending score.
+
+```{r}
+# Importing the dataset
+library(readxl)
+dataset = read_excel("Customers.xlsx")
+dataset = dataset[2:6]
+
+head(dataset)
+```
+
+```{r}
+# Encoding the categorical variables as factors
+dataset$`Acquisition Source` = as.numeric(factor(dataset$`Acquisition Source`,
+                                      levels = c('Internet', 'Agent'),
+                                      labels = c(1, 2)))
+
+dataset$Gender = as.numeric(factor(dataset$Gender,
+                                   levels = c('Female', 'Male'),
+                                   labels = c(1, 2)))
+```
+
+## 2. K-Means Clustering
+To find the optimal number of disjoint clusters to divide the customers into, we use the Silhouette method.
+
+```{r warning = FALSE, message = FALSE}
+# Optimal number of clusters
+library(factoextra)
+fviz_nbclust(dataset, kmeans, method='silhouette')
+```
+
+```{r}
+set.seed(100)
+kmeans = kmeans(x = dataset, centers = 6)
+dataset$Cluster <- as.factor(kmeans$cluster)
+```
+
+## 3. Analysing Clusters
+
+```{r warning = FALSE, message = FALSE}
+library(dplyr)
+cluster_analysis <- dataset %>% group_by(Cluster) %>% summarise(Count = n(),
+                                                                MeanAnnualIncome = mean(`Annual Income (k$)`),
+                                                                AverageAge = mean(Age),
+                                                                AverageSpendingScore = mean(`Spending Score (1-100)`))
+
+head(cluster_analysis)
+```
+
+```{r}
+# Visual Analysis
+library(ggplot2)
+ggplot(cluster_analysis, aes(Cluster, AverageSpendingScore)) + geom_col()
+```
+
+It can be seen that clusters 4 and 5 are the clusters with the highest mean Spending Score, followed by Cluster 2. To look into the demographics of these clusters further;
+
+```{r}
+ggplot(dataset, aes(`Annual Income (k$)`, `Spending Score (1-100)`, color = Cluster)) + geom_point()
+ggplot(dataset, aes(Age, `Spending Score (1-100)`, color = Cluster)) + geom_point()
+```
+
+The clusters can be summarised as;
+
+  1. Cluster 1 - Customers with age greater than 30 and average annual income have an average Spending Score of about 50. 
+  2. Cluster 2 - Young customers with low annual income have a higher than average Spending Score of about 63.
+  3. Cluster 3 - Customers with age less than 60 and a higher than average annual income have a very low average Spending Score.
+  4. Cluster 4 - People in their 30's with very high annual income have a very high mean Spending Score.
+  5. Cluster 5 - People in their 30's with higher than average annual income have the highest mean Spending Score.
+  6. Cluster 6 - People past their 40's with very low annual income have a very low average Spending Score.
+
+## 4. Results and Future Work
+The customers are successfully divided into six disjoint groups, analysis of which can help the business drive strategy to target a particular customer group to increase profits. Furthermore, we can use Classification algorithms to assign future customers into relevant groups.
+
+
+
+
+
+
+
